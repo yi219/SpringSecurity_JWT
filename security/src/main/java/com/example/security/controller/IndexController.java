@@ -1,8 +1,12 @@
 package com.example.security.controller;
 
+import com.example.security.config.auth.PrincipalDetails;
 import com.example.security.model.User;
 import com.example.security.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.annotation.Secured;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,8 +29,10 @@ public class IndexController{
         return "index";
     }
 
+    // 일반 로그인, OAuth 로그인 모두 PrincipalDetails로 받을 수 있음
     @GetMapping("/user")
-    public @ResponseBody String user(){
+    public @ResponseBody String user(@AuthenticationPrincipal PrincipalDetails principalDetails){
+        System.out.println("principalDetails: " + principalDetails.getUser());
         return "user";
     }
 
@@ -51,7 +57,7 @@ public class IndexController{
     @PostMapping("/join")
     public String join(User user){
         System.out.println(user);
-        user.setRole("USER");
+        user.setRole("ROLE_USER");
         String rawPassword = user.getPassword();
         String encPassword = bCryptPasswordEncoder.encode(rawPassword);
         user.setPassword(encPassword);
@@ -63,6 +69,23 @@ public class IndexController{
     public String joinForm(){
         return "joinForm";
     }
+
+    // 특정 함수에 1개의 권한을 걸고 싶을 때
+    @Secured("ROLE_ADMIN")
+    @GetMapping("/info")
+    public @ResponseBody String info(){
+        return "개인정보";
+    }
+
+    // 특정 함수에 여러 개의 권한을 걸고 싶을 때
+    // @PreAuthorize: 메소드가 실행되기 전 인증
+    // @PostAuthorize: 메소드가 실행된 후 응답을 보내기 전 인증
+    @PreAuthorize("hasAnyRole('ROLE_MANAGER', 'ROLE_ADMIN')")
+    @GetMapping("/data")
+    public @ResponseBody String data(){
+        return "데이터";
+    }
+
 
 }
 
