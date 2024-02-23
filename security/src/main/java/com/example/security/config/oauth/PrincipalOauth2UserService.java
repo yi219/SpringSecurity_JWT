@@ -1,6 +1,9 @@
 package com.example.security.config.oauth;
 
 import com.example.security.config.auth.PrincipalDetails;
+import com.example.security.config.oauth.provider.GoogleUserInfo;
+import com.example.security.config.oauth.provider.NaverUserInfo;
+import com.example.security.config.oauth.provider.OAuth2UserInfo;
 import com.example.security.model.User;
 import com.example.security.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +13,8 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 // 구글 로그인 버튼
 // > 구글 로그인 완료
@@ -38,13 +43,28 @@ public class PrincipalOauth2UserService extends DefaultOAuth2UserService {
         OAuth2User oAuth2User = super.loadUser(userRequest);
         System.out.println("getAttributes: " + oAuth2User.getAttributes());
 
+        OAuth2UserInfo oAuth2UserInfo = null;
+
+        if(userRequest.getClientRegistration().getRegistrationId().equals("google")){
+            oAuth2UserInfo = new GoogleUserInfo(oAuth2User.getAttributes());
+        }else if(userRequest.getClientRegistration().getRegistrationId().equals("naver")){
+            oAuth2UserInfo = new NaverUserInfo((Map<String, Object>) oAuth2User.getAttributes().get("response"));
+        }
+
         // OAuth2 로그인 시 username과 password는 필요 없지만 일단 넣어줌!
-        String provider = userRequest.getClientRegistration().getClientId();    // google
-        String providerId = oAuth2User.getAttribute("sub"); // 클라이언트별 고유한 google 번호
-        String username = provider + "_" + providerId;  // google_~~~~~~~~~~~ => 중복 X
+        String provider = oAuth2UserInfo.getProvider();
+        String providerId = oAuth2UserInfo.getProviderId();
+        String username = provider + "_" + providerId;
         String password = bCryptPasswordEncoder.encode("히히");
-        String email = oAuth2User.getAttribute("email");
+        String email = oAuth2UserInfo.getEmail();
         String role = "ROLE_USER";
+
+//        String provider = userRequest.getClientRegistration().getRegistrationId();    // google
+//        String providerId = oAuth2User.getAttribute("sub"); // 클라이언트별 고유한 google 번호
+//        String username = provider + "_" + providerId;  // google_~~~~~~~~~~~ => 중복 X
+//        String password = bCryptPasswordEncoder.encode("히히");
+//        String email = oAuth2User.getAttribute("email");
+//        String role = "ROLE_USER";
 
         User userEntity = userRepository.findByUsername(username);
 
